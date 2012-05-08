@@ -10,11 +10,11 @@
             el.appendChild(arguments[i]);
           else if (typeof arguments[i] === 'string')
             el.appendChild(document.createTextNode(arguments[i]));
+        if (attributes && typeof arguments[i].nodeType === 'undefined') {
+          for (var key in attributes)
+            element.setAttribute(key, attributes[key]);
+        }
+        return el;
       }
-      if (attributes) {
-        for (var key in attributes)
-          element.setAttribute(key, attributes[key]);
-      }
-      return el;
     })
   };
