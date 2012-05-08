@@ -10,6 +10,6 @@ console.log("-- Test 1 (...) --");
     _.h1("Heading #1"),
     _.h2("Heading #2"),
     _.p("A paragraph with some ", _.em("emphasized and ", _.strong("ocassionally strong")), " text")
-  })(html.eval));
+  })(html.evalCons));
 })();
 
