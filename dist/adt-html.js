@@ -2,6 +2,7 @@
  * adt-html.js - Algebraic Data Types for JavaScript
  * adt-html.js is free, public domain software (http://creativecommons.org/publicdomain/zero/1.0/)
  * Originally created by Rehno Lindeque of http://www.mischievousmeerkat.com
+ * Use it in combination with https://github.com/rehno-lindeque/adt.js
  */
 var html = (function() {
 "use strict";
@@ -50,11 +51,10 @@ var html = (function() {
           return el;
         }
       }),
-      evalCons: typeof adt.compose === 'undefined'? function(){throw "To use `html.evalCons()`, first include 'adt-utils.js'.";} : adt.compose(html.eval, html.cons)
+      evalCons: typeof adt.compose === 'undefined'? function(){throw "To use `html.evalCons()`, first include 'adt-util.js'.";} : adt.compose(html.eval, html.cons)
     };
   // Export html to a CommonJS module if exports is available
-  if (typeof(exports) !== "undefined" && exports !== null)
-    exports.html = html;
+  if (typeof module !== "undefined" && module !== null)
+    module.exports = html;
   return html;
 })();
-
