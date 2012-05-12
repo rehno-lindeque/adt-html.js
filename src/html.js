@@ -29,7 +29,7 @@
         'track','audio','video'
       ),
       eval: adt({ _: function(attributes) {
-          var el = document.createElement(this._key);
+          var el = document.createElement(this._tag);
           for (var i = 0; i < arguments.length; ++i)
             // Check if the argument is a DOM node
             if (arguments[i].nodeType)
