@@ -7,10 +7,12 @@ var adt = (function() {
 "use strict";
   // Define a local copy of adt
   var
-    isADTData = function(data) {
-      return Array.isArray(data) && data['_ADTData'] === true;
+    isADT = function(data) {
+      return Array.isArray(data) && typeof data['_tag'] === 'string';
     },
-    // TODO: isADTInterface
+    isInterface = function(obj) {
+      return typeof obj === 'function' && typeof obj['_eval'] === 'function';
+    },
     init = function(selfProto, args) {
       var i, key, strA;
       for (i = 0; i < args.length; ++i) {
@@ -42,17 +44,36 @@ var adt = (function() {
       // tables with keys as deconstructors and values as dispatch functions)
       var selfProto = {};
       init(selfProto, arguments);
-      return evaluator(selfProto);
+      return evaluators(selfProto);
     },
     makeConstructor = function(identifier) { 
       return function() {
         return adt.construct.apply(null, [identifier].concat([].slice.call(arguments, 0)));
       }; 
     },
+    // Get the internal [[Class]] property (or `Undefined` or `Null` for `(void 0)` and `null` respectively)
     getObjectType = function(data) {
-      var 
-        str = Object.prototype.toString.call(data);
+      var str = Object.prototype.toString.call(data);
       return str.slice(str.indexOf(' ') + 1, str.length - 1);
+    },
+    escapeString = function(str, escapes) {
+      var 
+        i, 
+        result = '',
+        replacement,
+        escapes = escapes || {
+          '\\': '\\\\',
+          '\"': '\\\"',
+          '\'': '\\\'',
+          '\t': '\\t',
+          '\r': '\\r',
+          '\n': '\\n'
+        };
+      for (i = 0; i < str.length; ++i) {
+        replacement = escapes[str[i]];
+        result += (replacement == null? str[i] : replacement);
+      }
+      return result;
     },
     unescapeString = function(str) {
       var
@@ -77,154 +98,93 @@ var adt = (function() {
       }
       // Add the last character if it wasn't escaped
       return i === str.length - 1? result + str[str.length - 1] : result;
-    },
-    escapeString = function(str, escapes) {
-      var 
-        i, 
-        result = '',
-        replacement,
-        escapes = escapes || {
-          '\\': '\\\\',
-          '\"': '\\\"',
-          '\'': '\\\'',
-          '\t': '\\t',
-          '\r': '\\r',
-          '\n': '\\n'
-        };
-      for (i = 0; i < str.length; ++i) {
-        replacement = escapes[str[i]];
-        result += (replacement == null? str[i] : replacement);
-      }
-      return result;
     };
-
   adt.construct = function(id) {
     if (arguments.length < 1)
       throw "Incorrect number of arguments passed to `construct()`."
+    var data = [].slice.call(arguments, 1);
     // (make sure the identifier is a string not a number to call the correct Array constructor)
-    var data = [String(id)].concat([].slice.call(arguments, 1));
-    data._ADTData = true;
+    data._tag = String(id);
     return data;
   };
 
-  adt.deconstruct = function(data){
-    return (isADTData(data)? 
-      { tag: data[0], args: data.slice(1) } : 
-      { tag: typeof data, args: data });
-  };
-
-  // ADT evaluator api
+  // ADT evaluators api
   var 
-    evaluator = function(selfProto) {
+    evaluators = function(selfProto) {
       var 
         tag,
-        evaluator = function(){
-          return evaluator.eval.apply(evaluator, arguments);
+        evaluators = function(){
+          // TODO: Add a second private method called `_run` which includes composition/recursion etc as applied by external plugins.
+          //       This would hopefully allow people to write generic higher-order functions that work together seamlesly.
+          return evaluators._eval.apply(evaluators, arguments);
         };
-
-      evaluator.recursive = function() {
-        evaluator.eval = evaluator.recurse;
-        return evaluator;
-      };
 
       var _eval = function(pattern, tag, datatype, args) {
         // TODO (version 1.0 & 2.0): The first argument can be removed
         // TODO (version 3.0): perform pattern matching
         // E.g. split the data around whitespace and in order of specific to general...
         var result;
-        evaluator._pattern = (pattern != null? pattern : (tag != null? tag : datatype));
-        evaluator._tag = (tag != null? tag : datatype);
-        evaluator._datatype = (datatype != null? datatype : 'adt');
-        var f = evaluator[evaluator._pattern]; 
+        evaluators._pattern = (pattern != null? pattern : (tag != null? tag : datatype));
+        evaluators._tag = (tag != null? tag : datatype);
+        evaluators._datatype = (datatype != null? datatype : 'ADT');
+        var f = evaluators[evaluators._pattern]; 
         if (typeof f !== 'function')
-          f = evaluator['_'];
-        return f.apply(evaluator, args);
+          f = evaluators['_'];
+        return f.apply(evaluators, args);
       };
 
-      evaluator.eval = function(data) {
+      evaluators._eval = function(data) {
         // Determine if the data is a construction (built by a constructor)
-        if (isADTData(data)) {
-          // pre-condition: No empty constructions
-          if (data.length < 1)
-            throw "It shouldn't be possible to have empty ADT constructions";
+        if (isADT(data)) {
           /* TODO: (version 3.0): Construct a pattern for pattern matching
           var
             pattern = data[0],
             i;
           for (i = 1; i < data.length; ++i) {
-            if (isADTData(data[i])) {
+            if (isADT(data[i])) {
               pattern = pattern.concat(' '.concat(data[i][0]));
             else
               pattern = pattern.concat(' '.concat(typeof data[i]));
           }*/
-          return _eval(null, data[0], 'adt', [].slice.call(data,1));
+          return _eval(null, data._tag, 'ADT', data);
         }
         // Evaluate primitive type
         return _eval(null, null, getObjectType(data), [data]);
       };
 
-      evaluator.recurse = function(data) {
-        if (isADTData(data)) {
-          // pre-condition: empty construction (built by a constructor)
-          if (data.length < 1)
-            throw "It shouldn't be possible to have empty ADT constructions";
-          // Evaluate sub-trees
-          var
-            result = new Array(data.length - 1),
-            pattern = '',
-            i;
-          result._ADTData = true;
-          pattern = String(data[0]);
-          for (i = 1; i < data.length; ++i) {
-            var subResult = isADTData(data[i])? evaluator.recurse(data[i]) : data[i];
-            if (isADTData(subResult)) {
-              pattern = pattern.concat(' '.concat(subResult[0]));
-              result[i - 1] = subResult;
-            }
-            else {
-              pattern = pattern.concat(' '.concat(typeof subResult));
-              result[i - 1] = subResult;
-            }
-          }
-          // TODO (version 3.0): Use pattern
-          return _eval(null/*pattern*/, data[0], 'adt', result);
-        }
-        return _eval(null, null, getObjectType(data), [data]);
-      };
-
-      /* TODO (version 2/3)?
+      /* TODO (version )?
       // Iterate over an array of values (while carrying state, like a finite state machine)
       // Similar to a haskell enumerator + iteratee with "map" as the enumerator and "iteratee" as the iteratee carying state
-      evaluator.mapIteratee = function() { console.log("mapIterate", arguments); return 0; };
+      evaluators.mapIteratee = function() { console.log("mapIterate", arguments); return 0; };
 
       // Similar to a haskell enumerator + iteratee with "fold" as the enumerator and "iteratee" as the iteratee carying state
-      evaluator.foldIteratee = function() { console.log("iterate", arguments); return 0; };
+      evaluators.foldIteratee = function() { console.log("iterate", arguments); return 0; };
       */
 
-      // Add adt constructors / methods to the evaluator
+      // Add adt constructors / methods to the evaluators
       for (tag in selfProto)
         switch(tag) {
           case 'eval':
-          case 'recurse':
-          case 'recursive':
             continue;  // Warning? trying to overide standard functions
           default:
             if (tag !== 'eval') {
               if (typeof selfProto[tag] === 'function')
-                // Custom evaluator
-                evaluator[tag] = (function(tag){ return function(){ return selfProto[tag].apply(evaluator, arguments); }; })(tag);
+                // Custom evaluators
+                evaluators[tag] = (function(tag){ return function(){ return selfProto[tag].apply(evaluators, arguments); }; })(tag);
               else 
                 // Constant constructor (return the constant value)
-                evaluator[tag] = (function(tag){ return function(){ return selfProto[tag]; }; })(tag);
+                evaluators[tag] = (function(tag){ return function(){ return selfProto[tag]; }; })(tag);
             }
         }
-      /* Create an identity constructor for the default constructor if none was supplied
+      // Create an identity constructor for the fall through pattern if none was supplied
       if (typeof selfProto['_'] === 'undefined') {
-        selfProto['_'] = function(data){ return data; };
-        evaluator['_'] = function(){ return selfProto['_'].apply(evaluator, arguments); }
-      }*/
+        selfProto['_'] = function(){
+          return this._datatype !== 'ADT'? arguments[0] : adt.construct.apply(null, [this._tag].concat([].slice.call(arguments, 0)));
+        },
+        evaluators['_'] = function(){ return selfProto['_'].apply(evaluators, arguments); };
+      }
       
-      return evaluator;
+      return evaluators;
     };
 
   // Automatically create constructors for any dispatch table
@@ -236,6 +196,24 @@ var adt = (function() {
     return adt.apply(null, keys);
   };
 
+  adt.recursive = function(f) {
+    var recurse = function (data) {
+        var i, results = [data[0]], subResult;
+        if (!isADT(data))
+          return f(data);
+        for (i = 1; i < data.length; ++i) {
+          subResult = recurse(data[i]);
+          if (typeof subResult !== 'undefined')
+            results.push(subResult);
+        }
+        // TODO: Take into account pattern matching requirements...
+        return f(adt.construct.apply(null, results));
+    };
+    // Assign all the methods in the interface to the recursive interface too
+    for (var key in f)
+      recurse[key] = f[key];
+    return recurse;
+  };
   // Create ADT's from an object's own property names (both enumerable + non-enumerable)
   adt.own = function() {
     var i, j, arg, names, key, dispatchTable = {};
@@ -256,44 +234,48 @@ var adt = (function() {
     return adt.apply(null, Array.prototype.concat.apply([], names));
   };
 
-  adt.serialize = function(){
+  adt.serialize = function(data){
     var 
-    serializeEval = adt('serialized', {'_': 
-      function() { 
-        var 
-          i, 
-          escapes = {
-            '\\': '\\\\',
-            '\"': '\\\"',
-            '\'': '\\\'',
-            '\t': '\\t',
-            '\r': '\\r',
-            '\n': '\\n',
-            ' ': '\\ ',
-            ',': '\\,',
-            '(': '\\(',
-            ')': '\\)',
-            '[': '\\[',
-            ']': '\\]',
-            '{': '\\{',
-            '}': '\\}'
-          },
-          str = escapeString(this._tag, escapes), 
-          data;
-        for (i = 0; i < arguments.length; ++i) {
-          // TODO: refactor (is deconstruct still necessary?)
-          data = adt.deconstruct(arguments[i]);
-          str += ' ' + (data.tag === 'string'? 
-            '"' + escapeString(data.args) + '"' : 
-            (data.tag === 'serialized'? 
-              "(" + data.args + ")" :
-              String(data.args)));
+      escapes = {
+        '\\': '\\\\',
+        '\"': '\\\"',
+        '\'': '\\\'',
+        '\t': '\\t',
+        '\r': '\\r',
+        '\n': '\\n',
+        ' ': '\\ ',
+        ',': '\\,',
+        '(': '\\(',
+        ')': '\\)',
+        '[': '\\[',
+        ']': '\\]',
+        '{': '\\{',
+        '}': '\\}'
+      },
+      SerializedADT = adt('SerializedADT').SerializedADT,
+      serializeEval = adt({
+        String: function(a) { return SerializedADT('"' + a + '"'); },
+        Number: function(a) { return SerializedADT(String(a)); },
+        Boolean: function(a) { return SerializedADT(a? 'True' : 'False'); },
+        // TODO: what about nested records, arrays and ADT's?
+        Array: function(a) { return SerializedADT('[' + String(a) + ']'); },
+        Arguments: function(a) { return this.Array([].slice.call(a, 0)); },
+        // TODO: what about adt's nested inside the record...
+        Object: function(a) { return SerializedADT('"' + JSON.stringify(a) + '"'); },
+        SerializedADT: function(a) { return SerializedADT('(' + a + ')'); },
+        _: function() {
+          if (this._datatype !== 'ADT')
+            // Currently unsupported: RegExp, Null, Undefined, Math, JSON, Function, Error, Date
+            throw "Unsupported primitive type `" + this._datatype + "` in `adt.serialize`.";
+          var
+            i,
+            str = escapeString(this._tag, escapes);
+          for (i = 0; i < arguments.length; ++i)
+            str += ' ' + this(arguments[i])[0];
+          return SerializedADT(str);
         }
-        return this.serialized(str); 
-      }}
-    );
-    
-    return String(adt.deconstruct(serializeEval.recurse.apply(serializeEval, arguments)).args);
+      });
+    return serializeEval(data)[0];
   };
 
   var 
