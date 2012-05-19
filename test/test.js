@@ -6,10 +6,14 @@ console.log("-- Test 1 (...) --");
   while (elResult.firstChild) {
     elResult.removeChild(elResult.firstChild);
   }
-  elResult.appendChild((function(_){
-    _.h1("Heading #1"),
-    _.h2("Heading #2"),
-    _.p("A paragraph with some ", _.em("emphasized and ", _.strong("ocassionally strong")), " text")
-  })(html.evalCons));
+  var elements = (function(){
+    return [
+      this.h1("Heading #1"),
+      this.h2("Heading #2"),
+      this.p("A paragraph with some ", this.em("emphasized and ", this.strong("ocassionally strong")), " text")
+    ];
+  }).call(html.evalCons);
+  for (var i = 0; i < elements.length; ++i)
+    elResult.appendChild(elements[i]);
 })();
 
