@@ -7,6 +7,8 @@ libFiles  = [
   'html'
 ]
 
+libPostfix = '-html'
+
 ###
 Build helpers (sequenced, composible)
 ###
@@ -50,23 +52,23 @@ Build scripts
 ###
 
 # Maybe (() -> IO) -> () -> IO
-build = (callback) -> (concatSrcFiles libFiles) (writeFile 'build/adt-html.js') callback
+build = (callback) -> (concatSrcFiles libFiles) (writeFile "build/adt#{libPostfix}.js") callback
 
 # Maybe (() -> IO) -> () -> IO
 minify = (callback) -> ->
   path.exists 'node_modules/.bin/uglifyjs', (exists) ->
     tool = if exists then 'node_modules/.bin/uglifyjs' else 'uglifyjs'
-    path.exists 'build/adt-html.js', (exists) ->
+    path.exists "build/adt#{libPostfix}.js", (exists) ->
       if exists
-        exec "#{tool} --no-copyright build/adt-html.js > build/adt-html.min.js", (err, stdout, stderr) ->
+        exec "#{tool} --no-copyright build/adt#{libPostfix}.js > build/adt#{libPostfix}.min.js", (err, stdout, stderr) ->
           throw err if err
           console.log stdout + stderr
           callback() if callback?
 
 # Maybe (() -> IO) -> () -> IO
 wrap = (callback) ->
-    filename = 'adt-html.js'
-    filenameMin = 'adt-html.min.js'
+    filename = "adt#{libPostfix}.js"
+    filenameMin = "adt#{libPostfix}.min.js"
 
     # TODO: Unfortunately it is not so easy to wrap `(callback) -> f0 f1 f2 callback` in JavaScript
     #       In order to get something similar to point-free style (http://www.haskell.org/haskellwiki/Pointfree)
@@ -78,8 +80,8 @@ wrap = (callback) ->
     writeMin = (callback) -> (concatFiles ['src/header.js', "build/#{filenameMin}", 'src/footer.js']) (writeFile "dist/#{filenameMin}") callback
 
     # Maybe (() -> IO) -> () -> IO
-    wrap = (callback) -> write (logDone 'adt-html.js') callback
-    wrapMin = (callback) -> writeMin (logDone 'adt-html.min.js') callback
+    wrap = (callback) -> write (logDone "adt#{libPostfix}.js") callback
+    wrapMin = (callback) -> writeMin (logDone "adt#{libPostfix}.min.js") callback
 
     # Maybe (() -> IO) -> () -> IO
     build = (ifExists "build/#{filename}") ((callback) -> wrap callback)
@@ -119,6 +121,6 @@ task 'minify', "Minify the resulting application file after build", ->
   (minify wrap())()
 
 task 'clean', "Cleanup all build files and distribution files", ->
-  exec "rm -rf build;rm dist/adt-html.js;rm dist/adt-html.min.js;rm dist/adt-html.module.js;rm dist/adt-html.module.min.js", (err, stdout, stderr) ->
+  exec "rm -rf build;rm dist/adt#{libPostfix}.js;rm dist/adt#{libPostfix}.min.js;rm dist/adt#{libPostfix}.module.js;rm dist/adt#{libPostfix}.module.min.js", (err, stdout, stderr) ->
     console.log stdout + stderr
     console.log "...Done (clean)"
