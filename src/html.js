@@ -35,7 +35,7 @@
             el.appendChild(arguments[i]);
           else if (typeof arguments[i] === 'string')
             el.appendChild(document.createTextNode(arguments[i]));
-        if (attributes && typeof arguments[i].nodeType === 'undefined') {
+        if (typeof attributes === 'object' && typeof attributes.nodeType === 'undefined') {
           for (var key in attributes)
             element.setAttribute(key, attributes[key]);
         }
