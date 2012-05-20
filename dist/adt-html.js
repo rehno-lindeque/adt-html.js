@@ -45,7 +45,7 @@ var html = (function() {
             el.appendChild(document.createTextNode(arguments[i]));
         if (typeof attributes === 'object' && typeof attributes.nodeType === 'undefined') {
           for (var key in attributes)
-            element.setAttribute(key, attributes[key]);
+            el.setAttribute(key, attributes[key]);
         }
         return el;
       }
