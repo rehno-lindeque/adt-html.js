@@ -94,6 +94,8 @@ var adt = (function() {
       // Add the last character if it wasn't escaped
       return i === str.length - 1? result + str[str.length - 1] : result;
     };
+  adt.isADT = isADT;
+  adt.isInterface = isInterface;
   var construct = function(tag, args) {
     // Make a shallow copy of args and patch on the tag
     var data = [].slice.call(args, 0);
@@ -465,7 +467,8 @@ var adt = (function() {
       var numberCast = Number(head);
       if (!isNaN(numberCast))
         return { result: numberCast, tail: tail };
-      throw "Unexpected token `" + head + "` in data.";
+      // The token is not a primitive type, so it must be an empty constructor tag
+      return { result: construct(unescapeString(head), []), tail: tail };
     };
   adt.deserialize = function(str){
     var
