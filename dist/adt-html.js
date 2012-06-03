@@ -4,7 +4,8 @@
  * Originally created by Rehno Lindeque of http://www.mischievousmeerkat.com
  * Use it in combination with https://github.com/rehno-lindeque/adt.js
  */
-var html = (function() {
+var adt = adt || (typeof require === 'function'? require('adt.js') : {}), 
+html = (function() {
 "use strict";
   // Using the html5 list of tags from (http://joshduck.com/periodic-table.html)
   // Other html api's should probably be in separate libraries? (xhtml, html4 etc)
@@ -53,7 +54,7 @@ var html = (function() {
     html = {
       cons: _cons,
       eval: _eval,
-      evalCons: typeof adt.compose === 'undefined'? function(){throw "To use `html.evalCons()`, first include 'adt-util.js'.";} : adt.compose(_eval, _cons)
+      evalCons: typeof adt.compose === 'undefined'? function(){ throw "`adt.compose()` is needed in order to use `evalCons`.";} : adt.compose(_eval, _cons)
     };
 
   // Export html to a CommonJS module if exports is available

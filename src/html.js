@@ -45,6 +45,6 @@
     html = {
       cons: _cons,
       eval: _eval,
-      evalCons: typeof adt.compose === 'undefined'? function(){throw "To use `html.evalCons()`, first include 'adt-util.js'.";} : adt.compose(_eval, _cons)
+      evalCons: typeof adt.compose === 'undefined'? function(){ throw "`adt.compose()` is needed in order to use `evalCons`.";} : adt.compose(_eval, _cons)
     };
 
