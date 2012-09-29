@@ -41,10 +41,9 @@
         }
         return el;
       }
-    });
-    html = {
-      cons: _cons,
-      eval: _eval,
-      evalCons: typeof adt.compose === 'undefined'? function(){ throw "`adt.compose()` is needed in order to use `evalCons`.";} : adt.compose(_eval, _cons)
-    };
-
+    }),
+    html = (typeof adt.compose === 'undefined')?
+      function(){ throw "`adt.compose()` is needed in order to use html as a function."; }
+      : adt.compose(_eval, _cons);
+    html.cons = _cons;
+    html.eval = _eval;

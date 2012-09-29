@@ -12,7 +12,7 @@ console.log("-- Test 1 (...) --");
       this.h2("Heading #2"),
       this.p("A paragraph with some ", this.em("emphasized and ", this.strong("ocassionally strong")), " text")
     ];
-  }).call(html.evalCons);
+  }).call(html);
   for (var i = 0; i < elements.length; ++i)
     elResult.appendChild(elements[i]);
 })();
