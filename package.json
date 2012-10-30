@@ -1,0 +1,18 @@
+{
+  "author": "Rehno Lindeque <code@rehno.lindeque.name> (http://rehno.lindeque.name)",
+  "name": "adt-html.js",
+  "description": "Treat HTML like any old Algebraic Data Type",
+  "version": "0.0.0",
+  "homepage": "https://github.com/rehno-lindeque/adt-html.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/rehno-lindeque/adt-html.js.git"
+  },
+  "main": "./dist/adt-html",
+  "engines": {},
+  "dependencies": {
+    "adt.js": "git+https://github.com/rehno-lindeque/adt.js.git#master"
+  },
+  "devDependencies": {},
+  "optionalDependencies": {}
+}
